@@ -21,8 +21,7 @@ def export_onnx(net: Net, block_size: int, latent_dim: int, out_path: Path):
                       external_data=False,
                       verbose=False,
                       input_names=['input'], 
-                      output_names=['output'],
-                      dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}})
+                      output_names=['output'])
 
     z = torch.randn(1, latent_dim)
     torch.onnx.export(net.decoder,
@@ -31,27 +30,20 @@ def export_onnx(net: Net, block_size: int, latent_dim: int, out_path: Path):
                       external_data=False,
                       verbose=False,
                       input_names=['input'], 
-                      output_names=['output'],
-                      dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}})
+                      output_names=['output'])
 
-def validate(net: Net, val_loader: DataLoader, block_size: int, dev: torch.device, out_dir: Path, epoch: int) -> float:
+def validate(net: Net, val_loader: DataLoader, block_size: int, dev: torch.device) -> float:
     net.eval()
     val_loss = 0.0
     with torch.no_grad():
-        xs: list[torch.Tensor] = []
-        ys: list[torch.Tensor] = []
         for batch in val_loader:
             x: torch.Tensor = batch.to(dev).float() * (1.0 / 255.0)
-            xs.append(x)
             x = torch.flatten(x, start_dim=1)
             z = net.encoder(x)
             y: torch.Tensor = net.decoder(z)
             loss = torch.nn.functional.mse_loss(y, x)
             y = y.reshape(x.shape[0], 3, block_size, block_size)
-            ys.append(y)
             val_loss += loss.item()
-        g = make_grid(torch.concat(xs + ys, dim=0), nrow=len(xs))
-        save_image(g, str(out_dir / f'{epoch:04}.png'))
     val_avg = val_loss / len(val_loader)
     return val_avg
 
@@ -66,7 +58,7 @@ def train(batch_size: int, lr: float, block_size: int, latent_dim: int, out_dir:
     train_data = MemoryMappedDataset(filename=(out_dir / 'datasets' / 'train.bin'), block_size=block_size, channels=3)
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
     val_data = MemoryMappedDataset(filename=(out_dir / 'datasets' / 'val.bin'), block_size=block_size, channels=3)
-    val_loader = DataLoader(val_data, batch_size=1, shuffle=False)
+    val_loader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
     logger.info(f'training samples: {len(train_data)}')
     logger.info(f'validation samples: {len(val_data)}')
     net = Net(block_size=block_size, channels=3, latent_dim=latent_dim)
@@ -90,7 +82,7 @@ def train(batch_size: int, lr: float, block_size: int, latent_dim: int, out_dir:
         if counter % epoch_size == 0:
             epoch += 1
             net.eval()
-            val_loss = validate(net, val_loader, block_size, dev, progress_dir, epoch)
+            val_loss = validate(net, val_loader, block_size, dev)
             logger.info(f'[{epoch:04}/{num_epochs:04}]: val_loss={val_loss:.6f}')
             if val_loss < best_loss:
                 best_loss = val_loss
@@ -100,7 +92,7 @@ def train(batch_size: int, lr: float, block_size: int, latent_dim: int, out_dir:
             net.train()
 
 def main():
-    train(batch_size=16, lr=1.0e-4, block_size=8, latent_dim=32, out_dir=Path('out'))
+    train(batch_size=16, lr=1.0e-4, block_size=8, latent_dim=8, out_dir=Path('out'))
 
 if __name__ == '__main__':
     main()

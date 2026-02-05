@@ -28,10 +28,12 @@ class Encoder(torch.nn.Module):
     def __init__(self, block_size: int, channels: int, latent_dim: int):
         super().__init__()
         self.layers = torch.nn.Sequential(
-            torch.nn.Linear(block_size * block_size * channels, 128),
-            _LinearResNet(128),
-            _LinearResNet(128),
-            torch.nn.Linear(128, latent_dim),
+            torch.nn.Linear(block_size * block_size * channels, 64),
+            _LinearResNet(64),
+            _LinearResNet(64),
+            _LinearResNet(64),
+            _LinearResNet(64),
+            torch.nn.Linear(64, latent_dim),
             torch.nn.Sigmoid()
         )
 

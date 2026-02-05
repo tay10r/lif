@@ -1,12 +1,12 @@
-#include "lif_decode.h"
+#include "linket_decode.h"
 
-#include "lif_config.h"
-
-void
-lif_decoder_forward(const float* input, float* output);
+#include "linket_config.h"
 
 void
-lif_decode_tile(const int x, const int y, const unsigned char* latent, const int w, const int h, unsigned char* rgb)
+linket_decoder_forward(const float* input, float* output);
+
+void
+linket_decode_tile(const int x, const int y, const unsigned char* latent, const int w, const int h, unsigned char* rgb)
 {
   const int blocks_per_row = (LIF_TILE_SIZE / LIF_BLOCK_SIZE);
   const int num_pixels = LIF_BLOCK_SIZE * LIF_BLOCK_SIZE;
@@ -31,7 +31,7 @@ lif_decode_tile(const int x, const int y, const unsigned char* latent, const int
       net_input[k] = ((float)latent[j * LIF_LATENT_DIM + k]) * (1.0F / 255.0F);
     }
 
-    lif_decoder_forward(net_input, net_output);
+    linket_decoder_forward(net_input, net_output);
 
     for (int p = 0; p < num_pixels; p++) {
 

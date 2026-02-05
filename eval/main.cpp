@@ -15,9 +15,9 @@ public:
   void eval(const stbi_uc* rgb, const int w, const int h)
   {
     {
-      auto al = algo::create_lif_algo();
+      auto al = algo::create_linket_algo();
 
-      run_algo(*al, rgb, w, h, "lif_result.png");
+      run_algo(*al, rgb, w, h, "linket_result.png");
     }
   }
 

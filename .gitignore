@@ -1,6 +1,10 @@
-data
+# C/C++ related stuff
 build
-out
 .cache
+
+# Python related stuff
+train/onnx2c
+train/data
+train/out
 __pycache__
-onnx2c
+.venv

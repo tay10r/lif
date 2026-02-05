@@ -1,12 +1,12 @@
-#include "lif_encode.h"
+#include "linket_encode.h"
 
-#include "lif_config.h"
-
-void
-lif_encoder_forward(const float* input, float* output);
+#include "linket_config.h"
 
 void
-lif_encode(const unsigned char* rgb, const int w, const int h, void* user_data, lif_tile_encode_callback cb)
+linket_encoder_forward(const float* input, float* output);
+
+void
+linket_encode(const unsigned char* rgb, const int w, const int h, void* user_data, linket_tile_encode_callback cb)
 {
   const int x_tiles = w / LIF_TILE_SIZE;
   const int y_tiles = h / LIF_TILE_SIZE;
@@ -50,7 +50,7 @@ lif_encode(const unsigned char* rgb, const int w, const int h, void* user_data, 
         net_input[2 * LIF_BLOCK_SIZE * LIF_BLOCK_SIZE + y * LIF_BLOCK_SIZE + x] = ((float)pixel[2]) * (1.0F / 255.0F);
       }
 
-      lif_encoder_forward(net_input, net_output);
+      linket_encoder_forward(net_input, net_output);
 
       for (int k = 0; k < LIF_LATENT_DIM; k++) {
         int v = (int)(net_output[k] * 255);

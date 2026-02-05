@@ -10,7 +10,7 @@
 class algo
 {
 public:
-  [[nodiscard]] static auto create_lif_algo() -> std::unique_ptr<algo>;
+  [[nodiscard]] static auto create_linket_algo() -> std::unique_ptr<algo>;
 
   /// The result of the algorithm.
   struct result final

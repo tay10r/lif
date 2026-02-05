@@ -15,6 +15,7 @@
 #include "stb_image.h"
 
 using u8 = std::uint8_t;
+
 namespace fs = std::filesystem;
 
 [[nodiscard]] auto
@@ -45,17 +46,80 @@ floor8(int v) -> int
   return (v / 8) * 8;
 }
 
+[[nodiscard]] auto
+get_window_offsets(const int w, const int h) -> std::vector<std::pair<int, int>>
+{
+  std::vector<std::pair<int, int>> offsets;
+
+  offsets.resize(w * h / 64);
+
+  int i = 0;
+
+  for (int y = 0; y < (h - 8); y += 8) {
+    for (int x = 0; x < (w - 8); x += 8) {
+      offsets[i] = std::make_pair(x, y);
+      i++;
+    }
+  }
+
+  return offsets;
+}
+
+template<typename Rng>
+[[nodiscard]] auto
+get_random_offsets(const int w, const int h, const int num_samples, Rng& rng) -> std::vector<std::pair<int, int>>
+{
+  std::uniform_int_distribution<int> x_dist(0, w - 8);
+  std::uniform_int_distribution<int> y_dist(0, h - 8);
+
+  std::vector<std::pair<int, int>> offsets;
+
+  offsets.resize(w * h / 64);
+
+  for (int i = 0; i < num_samples; i++) {
+    const auto x = x_dist(rng);
+    const auto y = y_dist(rng);
+    offsets[i] = std::make_pair(x, y);
+  }
+
+  return offsets;
+}
+
 int
 main(int argc, char** argv)
 {
-  if (argc < 3) {
-    std::cerr << "usage: " << argv[0] << " <input_dir> <output.bin>\n";
-    return 1;
+  fs::path input;
+
+  fs::path output;
+
+  auto sliding_window{ false };
+
+  for (int i = 1; i < argc; i++) {
+    const std::string arg(argv[i]);
+    if (arg == "--sliding-window") {
+      sliding_window = true;
+    } else if (arg[0] == '-') {
+      std::cerr << "unknown option \"" << arg << "\"" << std::endl;
+      return EXIT_FAILURE;
+    } else if (input.empty()) {
+      input = fs::path(arg);
+    } else if (output.empty()) {
+      output = fs::path(arg);
+    } else {
+      std::cerr << "trailing argument \"" << arg << "\"" << std::endl;
+      return EXIT_FAILURE;
+    }
   }
 
-  fs::path input = argv[1];
+  if (input.empty()) {
+    std::cerr << "missing input file" << std::endl;
+    return EXIT_FAILURE;
+  }
 
-  fs::path output = argv[2];
+  if (output.empty()) {
+    std::cerr << "missing output file" << std::endl;
+    return EXIT_FAILURE;
+  }
 
   std::vector<fs::path> files;
 
@@ -67,13 +131,13 @@ main(int argc, char** argv)
 
   std::sort(files.begin(), files.end());
 
-  constexpr size_t samples_per_image{ 128 };
-
   constexpr size_t dim_size{ 8 };
 
   constexpr size_t block_size{ 3 * dim_size * dim_size };
 
   const size_t num_images = files.size();
+
+  constexpr size_t samples_per_image{ 128 };
 
   std::vector<uint8_t> out_buffer(samples_per_image * block_size * num_images);
 
@@ -99,13 +163,12 @@ main(int argc, char** argv)
       continue;
     }
 
-    std::uniform_int_distribution<int> x_dist(0, w - dim_size);
-    std::uniform_int_distribution<int> y_dist(0, h - dim_size);
+    const auto offsets = sliding_window ? get_window_offsets(w, h) : get_random_offsets(w, h, samples_per_image, rng);
 
-    for (size_t s = 0; s < samples_per_image; s++) {
+    for (size_t s = 0; s < offsets.size(); s++) {
 
-      const auto x0 = x_dist(rng);
-      const auto y0 = y_dist(rng);
+      const auto x0 = offsets[s].first;
+      const auto y0 = offsets[s].second;
 
       for (int c = 0; c < 3; ++c) {
         for (int y = 0; y < dim_size; ++y) {

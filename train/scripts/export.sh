@@ -21,5 +21,5 @@ cmake --build onnx2c/build --target onnx2c
 
 onnx2c=onnx2c/build/onnx2c
 
-$onnx2c --func-name lif_encoder_forward out/encoder.onnx >lif_encoder_forward.c
-$onnx2c --func-name lif_decoder_forward out/decoder.onnx >lif_decoder_forward.c
+$onnx2c -d batch_size:1 --func-name linket_encoder_forward out/encoder.onnx >linket_encoder_forward.c
+$onnx2c -d batch_size:1 --func-name linket_decoder_forward out/decoder.onnx >linket_decoder_forward.c

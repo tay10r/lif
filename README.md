@@ -6,9 +6,7 @@ The compression ratio is `32/192`, which is about 17%. The quality is relatively
 image. The neural network itself is split into an encoder and a decoder, each only a few hundred kilobytes in size. The
 encoder and decoder are compiled into a dependency-free C library, making it easy to use in other projects.
 
-The project is called `LIF`, which is an acronym for "latent image format". It is kind of a bad name though, because
-I primarily made this for streaming video over UDP and have not yet given this compression algorithm a file format.
-The name will remain `LIF` because eventually it will get a file format.
+The project is called `Linket`, named after one of my cats.
 
 ### Examples
 

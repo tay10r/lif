@@ -1,8 +1,8 @@
 #include "algo.h"
 
-#include <lif_config.h>
-#include <lif_decode.h>
-#include <lif_encode.h>
+#include <linket_config.h>
+#include <linket_decode.h>
+#include <linket_encode.h>
 
 #include <string.h>
 
@@ -28,7 +28,7 @@ public:
 
     result_.rgb.resize(w * h * 3);
 
-    lif_encode(rgb, w, h, this, on_tile);
+    linket_encode(rgb, w, h, this, on_tile);
 
     result_.compressed_size = latent_buffer_offset_;
 
@@ -46,7 +46,7 @@ protected:
 
     self->latent_buffer_offset_ += s;
 
-    lif_decode_tile(x, y, latent, self->width_, self->height_, self->result_.rgb.data());
+    linket_decode_tile(x, y, latent, self->width_, self->height_, self->result_.rgb.data());
   }
 
 private:
@@ -64,7 +64,7 @@ private:
 } // namespace
 
 auto
-algo::create_lif_algo() -> std::unique_ptr<algo>
+algo::create_linket_algo() -> std::unique_ptr<algo>
 {
   return std::make_unique<lif_algo>();
 }

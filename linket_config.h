@@ -1,6 +1,6 @@
 #pragma once
 
-#define LIF_LATENT_DIM 32
+#define LIF_LATENT_DIM 8
 
 #define LIF_BLOCK_SIZE 8
 
