@@ -1,0 +1,6 @@
+torch
+torchvision
+onnxscript
+loguru
+pillow
+matplotlib

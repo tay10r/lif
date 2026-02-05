@@ -1,0 +1,9 @@
+#pragma once
+
+#define LIF_LATENT_DIM 32
+
+#define LIF_BLOCK_SIZE 8
+
+#define LIF_TILE_SIZE 40
+
+#define LIF_BLOCKS_PER_TILE ((LIF_TILE_SIZE * LIF_TILE_SIZE) / (LIF_BLOCK_SIZE * LIF_BLOCK_SIZE))
