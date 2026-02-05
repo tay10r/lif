@@ -1,7 +1,7 @@
 About
 =====
 
-This is an image compression algorithm that uses a neural network to encode 8x8 RGB blocks into latent space 8D vectors.
+This is an image compression algorithm that uses a neural network to encode 8x8 RGB blocks into latent space 32D vectors.
 The compression ratio is `32/192`, which is about 17%. The quality is relatively good, comparable to a high quality JPEG
 image. The neural network itself is split into an encoder and a decoder, each only a few hundred kilobytes in size. The
 encoder and decoder are compiled into a dependency-free C library, making it easy to use in other projects.
