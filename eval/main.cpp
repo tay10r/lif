@@ -33,9 +33,9 @@ protected:
 } // namespace
 
 auto
-main() -> int
+main(const int argc, char** argv) -> int
 {
-  const char* image_path = PROJECT_SOURCE_DIR "/eval/baboon.png";
+  const char* image_path = (argc > 1) ? argv[1] : PROJECT_SOURCE_DIR "/eval/baboon.png";
 
   int w = 0;
   int h = 0;
