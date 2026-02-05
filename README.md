@@ -17,13 +17,13 @@ The left is the original image, the right is the image after compression.
 
 Baboon
 
-<img width="480" height="480" alt="Image" src="https://github.com/user-attachments/assets/baab6cc0-7f80-4126-8663-fadbd587e377" />
-<img width="480" height="480" alt="Image" src="https://github.com/user-attachments/assets/fe489dd4-884c-420a-980d-6b60a6d3327f" />
+<img width="240" height="240" alt="Image" src="https://github.com/user-attachments/assets/baab6cc0-7f80-4126-8663-fadbd587e377" />
+<img width="240" height="240" alt="Image" src="https://github.com/user-attachments/assets/fe489dd4-884c-420a-980d-6b60a6d3327f" />
 
 Lenna
 
-<img width="480" height="480" alt="Image" src="https://github.com/user-attachments/assets/d5c45aad-27cb-4c89-82b9-e3558f120078" />
-<img width="480" height="480" alt="Image" src="https://github.com/user-attachments/assets/bda50dcd-e0b5-44e1-a9e8-c3404edd8a95" />
+<img width="240" height="240" alt="Image" src="https://github.com/user-attachments/assets/d5c45aad-27cb-4c89-82b9-e3558f120078" />
+<img width="240" height="240" alt="Image" src="https://github.com/user-attachments/assets/bda50dcd-e0b5-44e1-a9e8-c3404edd8a95" />
 
 ### Project Structure
 
