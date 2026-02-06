@@ -1,0 +1,8 @@
+{
+    "algo": "m0",
+    "algo_params": {
+        "latent_dim": 8,
+        "hidden_dim": 64,
+        "num_res_blocks": 2
+    }
+}

@@ -27,6 +27,10 @@ protected:
     const auto r = al.run(rgb, w, h);
 
     stbi_write_png(output_filename, w, h, 3, r.rgb.data(), w * 3);
+
+    std::cout << "compressed size: " << r.compressed_size << std::endl;
+    std::cout << "  compress time: " << r.compress_time << std::endl;
+    std::cout << "decompress time: " << r.decompress_time << std::endl;
   }
 };
 

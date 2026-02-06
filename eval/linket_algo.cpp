@@ -6,9 +6,11 @@
 
 #include <string.h>
 
+#include "timer.h"
+
 namespace {
 
-class lif_algo final : public algo
+class linket_algo final : public algo
 {
 public:
   [[nodiscard]] auto run(const uint8_t* rgb, const int w, const int h) -> result override
@@ -17,16 +19,18 @@ public:
 
     height_ = h;
 
-    const int x_tiles = w / LIF_TILE_SIZE;
-    const int y_tiles = h / LIF_TILE_SIZE;
+    const int x_tiles = w / LINKET_TILE_SIZE;
+    const int y_tiles = h / LINKET_TILE_SIZE;
 
     const size_t num_tiles = (size_t)x_tiles * (size_t)y_tiles;
 
-    latent_buffer_.resize(num_tiles * LIF_BLOCKS_PER_TILE * LIF_LATENT_DIM);
+    latent_buffer_.resize(num_tiles * LINKET_BLOCKS_PER_TILE * LINKET_LATENT_DIM);
 
     latent_buffer_offset_ = 0;
 
     result_.rgb.resize(w * h * 3);
+
+    compress_timer_.start();
 
     linket_encode(rgb, w, h, this, on_tile);
 
@@ -38,15 +42,27 @@ public:
 protected:
   static void on_tile(void* self_ptr, const int x, const int y, const uint8_t* latent)
   {
-    auto* self = static_cast<lif_algo*>(self_ptr);
+    auto* self = static_cast<linket_algo*>(self_ptr);
 
-    const size_t s = LIF_LATENT_DIM * LIF_BLOCKS_PER_TILE;
+    const auto dt = self->compress_timer_.elapsed();
+
+    const size_t s = LINKET_LATENT_DIM * LINKET_BLOCKS_PER_TILE;
 
     memcpy(self->latent_buffer_.data() + self->latent_buffer_offset_, latent, s);
 
     self->latent_buffer_offset_ += s;
 
+    timer t;
+
+    t.start();
+
     linket_decode_tile(x, y, latent, self->width_, self->height_, self->result_.rgb.data());
+
+    self->result_.compress_time += t.elapsed();
+
+    self->result_.decompress_time += t.elapsed();
+
+    self->compress_timer_.start();
   }
 
 private:
@@ -59,6 +75,8 @@ private:
   std::vector<uint8_t> latent_buffer_;
 
   size_t latent_buffer_offset_{};
+
+  timer compress_timer_;
 };
 
 } // namespace
@@ -66,5 +84,5 @@ private:
 auto
 algo::create_linket_algo() -> std::unique_ptr<algo>
 {
-  return std::make_unique<lif_algo>();
+  return std::make_unique<linket_algo>();
 }

@@ -20,6 +20,10 @@ public:
 
     /// The number of bytes of the image after compression.
     size_t compressed_size{};
+
+    float compress_time{};
+
+    float decompress_time{};
   };
 
   virtual ~algo();

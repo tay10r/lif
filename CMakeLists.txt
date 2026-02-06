@@ -7,6 +7,13 @@ option(LINKET_ENCODER "Whether to build the encoder." ON)
 option(LINKET_DECODER "Whether to build the decoder." ON)
 option(LINKET_EVAL    "Whether to build the evaluation program." OFF)
 
+find_package(OpenMP REQUIRED COMPONENTS C)
+
+set(compiler_flags)
+
+if(CMAKE_COMPILER_IS_GNUCC)
+  set(compiler_flags -ffast-math -march=native -mtune=native)
+endif()
 
 if(LINKET_ENCODER)
 
@@ -17,6 +24,10 @@ if(LINKET_ENCODER)
   )
 
   target_include_directories(linket_encoder PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+
+  target_compile_options(linket_encoder PRIVATE ${compiler_flags})
+
+  target_link_libraries(linket_encoder PUBLIC OpenMP::OpenMP_C)
 
   add_library(linket::encoder ALIAS linket_encoder)
 
@@ -31,6 +42,10 @@ if(LINKET_DECODER)
   )
 
   target_include_directories(linket_decoder PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+
+  target_compile_options(linket_decoder PRIVATE ${compiler_flags})
+
+  target_link_libraries(linket_decoder PUBLIC OpenMP::OpenMP_C)
 
   add_library(linket::decoder ALIAS linket_decoder)
 
@@ -48,6 +63,8 @@ if(LINKET_EVAL)
     eval/algo.h
     eval/algo.cpp
     eval/linket_algo.cpp
+    eval/timer.h
+    eval/timer.cpp
     eval/deps/stb_image.c
     eval/deps/stb_image.h
     eval/deps/stb_image_write.h

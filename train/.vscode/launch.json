@@ -2,10 +2,46 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Train",
+            "name": "Train M0 Small",
             "type": "debugpy",
             "request": "launch",
-            "module": "src.train"
+            "module": "src.train",
+            "args": [
+                "--config",
+                "configs/m0_small.json",
+                "--out_dir",
+                "out/models/m0_small"
+            ]
+        },
+        {
+            "name": "Train M0 Medium",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.train",
+            "args": [
+                "--config",
+                "configs/m0_medium.json",
+                "--out_dir",
+                "out/models/m0_medium"
+            ]
+        },
+        {
+            "name": "Train M1 Medium",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.train",
+            "args": [
+                "--config",
+                "configs/m1_medium.json",
+                "--out_dir",
+                "out/models/m1_medium"
+            ]
+        },
+        {
+            "name": "Export ONNX",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.export_onnx"
         }
     ]
 }
