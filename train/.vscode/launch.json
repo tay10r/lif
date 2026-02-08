@@ -26,6 +26,18 @@
             ]
         },
         {
+            "name": "Train M0 Large",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.train",
+            "args": [
+                "--config",
+                "configs/m0_large.json",
+                "--out_dir",
+                "out/models/m0_large"
+            ]
+        },
+        {
             "name": "Train M1 Medium",
             "type": "debugpy",
             "request": "launch",
@@ -35,6 +47,18 @@
                 "configs/m1_medium.json",
                 "--out_dir",
                 "out/models/m1_medium"
+            ]
+        },
+        {
+            "name": "Train M2 Medium",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.train",
+            "args": [
+                "--config",
+                "configs/m2_medium.json",
+                "--out_dir",
+                "out/models/m2_medium"
             ]
         },
         {

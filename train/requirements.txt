@@ -4,3 +4,4 @@ onnxscript
 loguru
 pillow
 matplotlib
+pytorch-msssim

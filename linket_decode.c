@@ -28,8 +28,13 @@ linket_decode_tile(const int x, const int y, const unsigned char* latent, const 
     const int x_offset = x + x_block * LINKET_BLOCK_SIZE;
     const int y_offset = y + y_block * LINKET_BLOCK_SIZE;
 
+    const float scale = *((const float*)(latent + j * LINKET_BYTES_PER_LATENT));
+
     for (int k = 0; k < LINKET_LATENT_DIM; k++) {
-      net_input[k] = ((float)latent[j * LINKET_LATENT_DIM + k]) * (1.0F / 255.0F);
+
+      const float x = ((float)latent[j * LINKET_BYTES_PER_LATENT + k + sizeof(float)]) * (1.0F / 255.0F);
+      const float y = (x * 2.0F - 1.0F) * scale;
+      net_input[k] = y;
     }
 
     linket_decoder_forward(net_input, net_output);

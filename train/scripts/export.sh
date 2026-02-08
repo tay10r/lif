@@ -21,8 +21,10 @@ cmake --build onnx2c/build --target onnx2c
 
 onnx2c=onnx2c/build/onnx2c
 
-#model=m0_medium
-model=m1_medium
+#model=m0_small
+model=m0_medium
+#model=m0_large
+#model=m1_medium
 
 $onnx2c -d batch_size:1 --no-globals --func-name linket_encoder_forward out/models/$model/encoder.onnx >../linket_encoder_forward.c
 $onnx2c -d batch_size:1 --no-globals --func-name linket_decoder_forward out/models/$model/decoder.onnx >../linket_decoder_forward.c

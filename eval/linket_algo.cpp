@@ -52,13 +52,13 @@ protected:
 
     self->latent_buffer_offset_ += s;
 
+    self->result_.compress_time += self->compress_timer_.elapsed();
+
     timer t;
 
     t.start();
 
     linket_decode_tile(x, y, latent, self->width_, self->height_, self->result_.rgb.data());
-
-    self->result_.compress_time += t.elapsed();
 
     self->result_.decompress_time += t.elapsed();
 

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from torch import Tensor
 from torch import nn
 
-from src.nn.quantize import STEQuantize
+from src.nn.quantize import STEQuantizePerVectorAbsMax
 
 class Algo(ABC):
 
@@ -19,6 +19,6 @@ def forward(algo: Algo, x: Tensor) -> Tensor:
     encoder = algo.get_encoder()
     decoder = algo.get_decoder()
     z = encoder(x)
-    z = STEQuantize.apply(z)
+    z, _ = STEQuantizePerVectorAbsMax.apply(z)
     y = decoder(z)
     return y

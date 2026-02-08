@@ -12,6 +12,9 @@ def export_onnx(algo: Algo, block_size: int, latent_dim: int, out_path: Path):
     encoder: torch.nn.Module = algo.get_encoder()
     decoder: torch.nn.Module = algo.get_decoder()
 
+    encoder.eval()
+    decoder.eval()
+
     encoder.load_state_dict(torch.load(out_path / 'best_encoder.pt', map_location='cpu'))
     decoder.load_state_dict(torch.load(out_path / 'best_decoder.pt', map_location='cpu'))
 
@@ -41,9 +44,12 @@ def main():
         model_name = model_dir.name
         config_path = Path('configs')  / f'{model_name}.json'
         config: Config = load_config(config_path)
-        algo: Algo = make_algo(config.algo, block_size=config.block_size, channels=config.input_channels, **config.algo_params)
-        latent_dim = config.algo_params['latent_dim']
-        export_onnx(algo, config.block_size, latent_dim, model_dir)
+        algo: Algo = make_algo(config.algo,
+                               block_size=config.block_size,
+                               channels=config.input_channels,
+                               latent_dim=config.latent_dim,
+                               **config.algo_params)
+        export_onnx(algo, config.block_size, config.latent_dim, model_dir)
 
 if __name__ == '__main__':
     main()

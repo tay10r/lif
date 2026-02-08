@@ -9,6 +9,7 @@ class Config:
     lr: float = 1.0e-4
     block_size: int = 8
     input_channels: int = 3
+    latent_dim: int = 8
 
 def load_config(path: str | Path) -> Config:
     import json

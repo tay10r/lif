@@ -1,12 +1,12 @@
 from argparse import ArgumentParser
 from pathlib import Path
-from collections import deque
 import math
 
 from torch.utils.data import DataLoader
 import torch
 from torchvision.utils import make_grid, save_image
 from loguru import logger
+from pytorch_msssim import SSIM
 
 from src.data import MemoryMappedDataset
 from src.algos.base import Algo, forward
@@ -54,7 +54,11 @@ def train(config_path: Path, out_dir: Path, datasets_dir: Path):
     logger.info(f'training samples: {len(train_data)}')
     logger.info(f'validation samples: {len(val_data)}')
 
-    algo = make_algo(config.algo, block_size=config.block_size, channels=config.input_channels, **config.algo_params)
+    algo = make_algo(config.algo,
+                     block_size=config.block_size,
+                     channels=config.input_channels,
+                     latent_dim=config.latent_dim,
+                      **config.algo_params)
 
     enc = algo.get_encoder()
     dec = algo.get_decoder()

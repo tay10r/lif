@@ -12,8 +12,7 @@ class Encoder(torch.nn.Module):
         self.layers = torch.nn.Sequential(
             torch.nn.Linear(block_size * block_size * channels, hidden_dim),
             *[LinearResNet(hidden_dim) for _ in range(num_res_blocks)],
-            torch.nn.Linear(hidden_dim, latent_dim),
-            torch.nn.Sigmoid()
+            torch.nn.Linear(hidden_dim, latent_dim)
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -33,7 +32,7 @@ class Decoder(torch.nn.Module):
         x = self.__layers(x)
         return x
 
-class LinearResnetAlgo(Algo):
+class M0Algo(Algo):
     def __init__(self, block_size: int, channels: int, latent_dim: int, hidden_dim: int, num_res_blocks: int):
         self.__encoder = Encoder(block_size=block_size, channels=channels, latent_dim=latent_dim, hidden_dim=hidden_dim, num_res_blocks=num_res_blocks)
         self.__decoder = Decoder(block_size=block_size, channels=channels, latent_dim=latent_dim, hidden_dim=hidden_dim, num_res_blocks=num_res_blocks)

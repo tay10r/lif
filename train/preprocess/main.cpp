@@ -14,6 +14,8 @@
 
 #include "stb_image.h"
 
+namespace {
+
 using u8 = std::uint8_t;
 
 namespace fs = std::filesystem;
@@ -41,22 +43,16 @@ load_rgb(const fs::path& p) -> std::optional<std::tuple<std::vector<u8>, int, in
 }
 
 [[nodiscard]] auto
-floor8(int v) -> int
-{
-  return (v / 8) * 8;
-}
-
-[[nodiscard]] auto
-get_window_offsets(const int w, const int h) -> std::vector<std::pair<int, int>>
+get_window_offsets(const int w, const int h, const int dim_size) -> std::vector<std::pair<int, int>>
 {
   std::vector<std::pair<int, int>> offsets;
 
-  offsets.resize(w * h / 64);
+  offsets.resize(w * h / (dim_size * dim_size));
 
   int i = 0;
 
-  for (int y = 0; y < (h - 8); y += 8) {
-    for (int x = 0; x < (w - 8); x += 8) {
+  for (int y = 0; y < (h - dim_size); y += dim_size) {
+    for (int x = 0; x < (w - dim_size); x += dim_size) {
       offsets[i] = std::make_pair(x, y);
       i++;
     }
@@ -67,14 +63,15 @@ get_window_offsets(const int w, const int h) -> std::vector<std::pair<int, int>>
 
 template<typename Rng>
 [[nodiscard]] auto
-get_random_offsets(const int w, const int h, const int num_samples, Rng& rng) -> std::vector<std::pair<int, int>>
+get_random_offsets(const int w, const int h, const int num_samples, const int dim_size, Rng& rng)
+  -> std::vector<std::pair<int, int>>
 {
-  std::uniform_int_distribution<int> x_dist(0, w - 8);
-  std::uniform_int_distribution<int> y_dist(0, h - 8);
+  std::uniform_int_distribution<int> x_dist(0, w - dim_size);
+  std::uniform_int_distribution<int> y_dist(0, h - dim_size);
 
   std::vector<std::pair<int, int>> offsets;
 
-  offsets.resize(w * h / 64);
+  offsets.resize(num_samples);
 
   for (int i = 0; i < num_samples; i++) {
     const auto x = x_dist(rng);
@@ -85,8 +82,10 @@ get_random_offsets(const int w, const int h, const int num_samples, Rng& rng) ->
   return offsets;
 }
 
-int
-main(int argc, char** argv)
+} // namespace
+
+auto
+main(int argc, char** argv) -> int
 {
   fs::path input;
 
@@ -159,21 +158,22 @@ main(int argc, char** argv)
     }
 
     auto& [img, w, h] = *loaded;
-    if ((w < 8) || (h < 8)) {
+    if ((w < dim_size) || (h < dim_size)) {
       continue;
     }
 
-    const auto offsets = sliding_window ? get_window_offsets(w, h) : get_random_offsets(w, h, samples_per_image, rng);
+    const auto offsets =
+      sliding_window ? get_window_offsets(w, h, dim_size) : get_random_offsets(w, h, samples_per_image, dim_size, rng);
 
     for (size_t s = 0; s < offsets.size(); s++) {
 
       const auto x0 = offsets[s].first;
       const auto y0 = offsets[s].second;
 
-      for (int c = 0; c < 3; ++c) {
-        for (int y = 0; y < dim_size; ++y) {
+      for (auto c = 0; c < 3; ++c) {
+        for (auto y = 0; y < dim_size; ++y) {
           auto row = static_cast<std::size_t>((y0 + y) * w * 3);
-          for (int x = 0; x < dim_size; ++x) {
+          for (auto x = 0; x < dim_size; ++x) {
             block[c * dim_size * dim_size + y * dim_size + x] = img[row + static_cast<std::size_t>((x0 + x) * 3 + c)];
           }
         }

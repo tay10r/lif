@@ -5,6 +5,30 @@
 void
 linket_encoder_forward(const float* input, float* output);
 
+static void
+pack_latent(const float* in, unsigned char* out)
+{
+  float abs_max = 0.0F;
+
+  for (int k = 0; k < LINKET_LATENT_DIM; k++) {
+    const float x = in[k];
+    const float y = x < 0.0F ? -x : x;
+    abs_max = (y > abs_max) ? y : abs_max;
+  }
+
+  *((float*)out) = abs_max;
+
+  const float scale = 1.0F / (LINKET_EPSILON + abs_max);
+
+  for (int k = 0; k < LINKET_LATENT_DIM; k++) {
+    const float x = ((in[k] * scale) + 1.0F) * 0.5F;
+    int v = (int)(x * 255);
+    v = (v > 255) ? 255 : v;
+    v = (v < 0) ? 0 : v;
+    out[k + sizeof(float)] = (unsigned char)v;
+  }
+}
+
 void
 linket_encode(const unsigned char* rgb, const int w, const int h, void* user_data, linket_tile_encode_callback cb)
 {
@@ -13,7 +37,7 @@ linket_encode(const unsigned char* rgb, const int w, const int h, void* user_dat
 
   const int num_tiles = x_tiles * y_tiles;
 
-  unsigned char latent_bits[LINKET_LATENT_DIM * LINKET_BLOCKS_PER_TILE];
+  unsigned char latent_bits[LINKET_BYTES_PER_LATENT * LINKET_BLOCKS_PER_TILE];
 
   for (int i = 0; i < num_tiles; i++) {
 
@@ -55,12 +79,7 @@ linket_encode(const unsigned char* rgb, const int w, const int h, void* user_dat
 
       linket_encoder_forward(net_input, net_output);
 
-      for (int k = 0; k < LINKET_LATENT_DIM; k++) {
-        int v = (int)(net_output[k] * 255);
-        v = (v > 255) ? 255 : v;
-        v = (v < 0) ? 0 : v;
-        latent_bits[j * LINKET_LATENT_DIM + k] = (unsigned char)v;
-      }
+      pack_latent(net_output, latent_bits + j * LINKET_BYTES_PER_LATENT);
     }
 
     cb(user_data, /*x=*/x_tile * LINKET_TILE_SIZE, /*y=*/y_tile * LINKET_TILE_SIZE, latent_bits);
