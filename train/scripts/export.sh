@@ -21,8 +21,8 @@ cmake --build onnx2c/build --target onnx2c
 
 onnx2c=onnx2c/build/onnx2c
 
-#model=m0_small
-model=m0_medium
+model=m0_small
+#model=m0_medium
 #model=m0_large
 #model=m1_medium
 
