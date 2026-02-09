@@ -21,20 +21,9 @@ namespace {
 
 class program;
 
-struct tile_context final
+struct tile_buffer final
 {
-  program* parent{};
-
-  /**
-   * @brief When this buffer is non-empty, the tile is being used and not available.
-   * */
-  uv_buf_t buffer{};
-
-  uv_udp_send_t writer{};
-
-  char data[1400]{};
-
-  [[nodiscard]] auto available() const -> bool { return buffer.len == 0; }
+  char data[1408]{};
 };
 
 class program final
@@ -59,17 +48,19 @@ public:
 
     uv_udp_init(&loop_, &socket_);
 
+    sockaddr_in bind_address{};
+
+    uv_ip4_addr("0.0.0.0", 0, &bind_address);
+
+    uv_udp_bind(&socket_, reinterpret_cast<const sockaddr*>(&bind_address), 0);
+
     uv_ip4_addr(send_ip, send_port, &send_address_);
 
-    required_tiles_ = (w / LINKET_TILE_SIZE) * (h / LINKET_TILE_SIZE);
+    const auto num_tiles = (w / LINKET_TILE_SIZE) * (h / LINKET_TILE_SIZE);
 
-    available_tiles_ = required_tiles_ * 2;
+    tiles_.resize(num_tiles);
 
-    tiles_.resize(available_tiles_);
-
-    for (size_t i = 0; i < tiles_.size(); i++) {
-      tiles_[i].parent = this;
-    }
+    buffers_.resize(num_tiles);
   }
 
   void run()
@@ -84,23 +75,43 @@ public:
 
       auto* rgb = camera_->wait_frame();
 
-      if (!can_send_frame()) {
-        SPDLOG_WARN("not enough tiles available for sending frame");
-        continue;
-      }
-
       last_frame_time_ = unix_time_us();
+
+      tile_offset_ = 0;
 
       linket_encode(rgb, frame_width_, frame_height_, this, on_encoded_tile);
 
-      auto t1 = clock::now();
+      const auto t1 = clock::now();
 
-      const auto frame_dt = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+      uv_handle_set_data(reinterpret_cast<uv_handle_t*>(&writer_), this);
 
-      t0 = t1;
+      std::vector<unsigned int> counts(buffers_.size());
+      std::vector<sockaddr*> addresses(buffers_.size());
+      std::vector<uv_buf_t*> buffers(buffers_.size());
+      for (size_t i = 0; i < buffers_.size(); i++) {
+        counts[i] = 1;
+        addresses[i] = reinterpret_cast<sockaddr*>(&send_address_);
+        buffers[i] = &buffers_[i];
+      }
+
+      const int num_sent = uv_udp_try_send2(
+        &socket_, static_cast<unsigned int>(buffers_.size()), buffers.data(), counts.data(), addresses.data(), 0);
+      if (num_sent < 0) {
+        SPDLOG_ERROR("failed to send tile {}", uv_strerror(num_sent));
+        return;
+      } else if (num_sent != static_cast<int>(buffers_.size())) {
+        SPDLOG_WARN("only sent {} out of {} tiles", num_sent, buffers_.size());
+      }
+
+      const auto t2 = clock::now();
+
+      const auto compression_dt = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+      const auto frame_dt = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t0).count();
+
+      t0 = t2;
 
       if (benchmark_) {
-        SPDLOG_INFO("total frame time {} ms", frame_dt);
+        SPDLOG_INFO("total frame time: {:4} ms, compression time: {:4} ms", frame_dt, compression_dt);
       }
     }
 
@@ -110,63 +121,38 @@ public:
   }
 
 protected:
-  [[nodiscard]] auto can_send_frame() const -> bool { return available_tiles_ >= required_tiles_; }
-
   static void on_send(uv_udp_send_t* writer, const int status)
   {
-    auto* ctx = static_cast<tile_context*>(uv_handle_get_data(reinterpret_cast<uv_handle_t*>(writer)));
-    ctx->buffer.base = nullptr;
-    ctx->buffer.len = 0;
-    ctx->parent->available_tiles_++;
+    auto* self = static_cast<program*>(uv_handle_get_data(reinterpret_cast<uv_handle_t*>(writer)));
+
+    (void)self;
+
+    if (status != 0) {
+      SPDLOG_ERROR("failed to send tile data: {}\n", uv_strerror(status));
+    }
   }
 
   static void on_encoded_tile(void* self_ptr, const int x, const int y, const unsigned char* latent)
   {
     auto* self = static_cast<program*>(self_ptr);
 
-    auto* ctx = self->find_tile_context();
-    if (!ctx) {
-      SPDLOG_ERROR("failed to find tile for encoding");
-      return;
-    }
+    auto* tile_buf = &self->tiles_[self->tile_offset_];
 
-    auto* ptr = reinterpret_cast<unsigned char*>(ctx->data);
+    auto* ptr = reinterpret_cast<unsigned char*>(tile_buf->data);
 
     *reinterpret_cast<int64_t*>(ptr) = self->last_frame_time_;
     *reinterpret_cast<int32_t*>(ptr + 8) = x;
     *reinterpret_cast<int32_t*>(ptr + 12) = y;
 
-    static_assert((LINKET_BYTES_PER_TILE + 16) <= sizeof(tile_context::data));
+    static_assert((LINKET_BYTES_PER_TILE + 16) <= sizeof(tile_buffer::data));
 
     memcpy(ptr + 16, latent, LINKET_BYTES_PER_TILE);
 
-    ctx->buffer.base = reinterpret_cast<char*>(ptr);
+    self->buffers_[self->tile_offset_].base = reinterpret_cast<char*>(ptr);
 
-    ctx->buffer.len = LINKET_BYTES_PER_TILE + 16;
+    self->buffers_[self->tile_offset_].len = LINKET_BYTES_PER_TILE + 16;
 
-    uv_handle_set_data(reinterpret_cast<uv_handle_t*>(&ctx->writer), ctx);
-
-    const int err = uv_udp_send(
-      &ctx->writer, &self->socket_, &ctx->buffer, 1, reinterpret_cast<const sockaddr*>(&self->send_address_), on_send);
-    if (err != 0) {
-      SPDLOG_ERROR("failed to send tile");
-      ctx->buffer.len = 0;
-      return;
-    }
-
-    self->available_tiles_--;
-  }
-
-  [[nodiscard]] auto find_tile_context() -> tile_context*
-  {
-    for (size_t i = 0; i < tiles_.size(); i++) {
-      auto* ctx = &tiles_[i];
-      if (ctx->available()) {
-        return ctx;
-      }
-    }
-
-    return nullptr;
+    self->tile_offset_++;
   }
 
   [[nodiscard]] static auto unix_time_us() -> int64_t
@@ -188,13 +174,15 @@ private:
 
   int64_t last_frame_time_{};
 
-  std::vector<tile_context> tiles_;
+  size_t tile_offset_{};
+
+  std::vector<tile_buffer> tiles_;
+
+  std::vector<uv_buf_t> buffers_;
+
+  uv_udp_send_t writer_;
 
   sockaddr_in send_address_;
-
-  size_t required_tiles_{};
-
-  size_t available_tiles_{};
 
   bool benchmark_{ false };
 };
