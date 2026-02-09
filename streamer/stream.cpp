@@ -1,22 +1,30 @@
 #include "camera.h"
 
+#include <spdlog/spdlog.h>
+
 #include <linket_config.h>
 #include <linket_encode.h>
 
 #include <uv.h>
 
 #include <chrono>
-#include <iostream>
+#include <stdexcept>
 #include <vector>
 
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "stream_options.h"
+
 namespace {
+
+class program;
 
 struct tile_context final
 {
+  program* parent{};
+
   /**
    * @brief When this buffer is non-empty, the tile is being used and not available.
    * */
@@ -32,7 +40,7 @@ struct tile_context final
 class program final
 {
 public:
-  explicit program(const int device_index, const int w, const int h, const char* broadcast_ip, const int broadcast_port)
+  explicit program(const int device_index, const int w, const int h, const char* send_ip, const int send_port)
     : camera_(camera::create(device_index, w, h))
   {
     const auto [w1, h1] = camera_->get_frame_size();
@@ -41,15 +49,21 @@ public:
 
     frame_height_ = h1;
 
-    std::cout << "frame size: " << w1 << 'x' << h1 << std::endl;
-
     uv_loop_init(&loop_);
 
     uv_udp_init(&loop_, &socket_);
 
-    uv_ip4_addr(broadcast_ip, broadcast_port, &broadcast_address_);
+    uv_ip4_addr(send_ip, send_port, &send_address_);
 
-    tiles_.resize((w / LINKET_TILE_SIZE) * (h / LINKET_TILE_SIZE) * 2);
+    required_tiles_ = (w / LINKET_TILE_SIZE) * (h / LINKET_TILE_SIZE);
+
+    available_tiles_ = required_tiles_ * 2;
+
+    tiles_.resize(available_tiles_);
+
+    for (size_t i = 0; i < tiles_.size(); i++) {
+      tiles_[i].parent = this;
+    }
   }
 
   void run()
@@ -60,11 +74,16 @@ public:
 
       auto* rgb = camera_->wait_frame();
 
+      if (!can_send_frame()) {
+        SPDLOG_WARN("not enough tiles available for sending frame");
+        continue;
+      }
+
       last_frame_time_ = unix_time_us();
 
       linket_encode(rgb, frame_width_, frame_height_, this, on_encoded_tile);
 
-      std::cout << "frame" << std::endl;
+      SPDLOG_DEBUG("sent frame");
     }
 
     uv_close(reinterpret_cast<uv_handle_t*>(&socket_), nullptr);
@@ -73,11 +92,14 @@ public:
   }
 
 protected:
+  [[nodiscard]] auto can_send_frame() const -> bool { return available_tiles_ >= required_tiles_; }
+
   static void on_send(uv_udp_send_t* writer, const int status)
   {
     auto* ctx = static_cast<tile_context*>(uv_handle_get_data(reinterpret_cast<uv_handle_t*>(writer)));
     ctx->buffer.base = nullptr;
     ctx->buffer.len = 0;
+    ctx->parent->available_tiles_++;
   }
 
   static void on_encoded_tile(void* self_ptr, const int x, const int y, const unsigned char* latent)
@@ -86,7 +108,7 @@ protected:
 
     auto* ctx = self->find_tile_context();
     if (!ctx) {
-      std::cerr << "failed to find tile" << std::endl;
+      SPDLOG_ERROR("failed to find tile for encoding");
       return;
     }
 
@@ -106,15 +128,15 @@ protected:
 
     uv_handle_set_data(reinterpret_cast<uv_handle_t*>(&ctx->writer), ctx);
 
-    const int err = uv_udp_send(&ctx->writer,
-                                &self->socket_,
-                                &ctx->buffer,
-                                1,
-                                reinterpret_cast<const sockaddr*>(&self->broadcast_address_),
-                                on_send);
+    const int err = uv_udp_send(
+      &ctx->writer, &self->socket_, &ctx->buffer, 1, reinterpret_cast<const sockaddr*>(&self->send_address_), on_send);
     if (err != 0) {
-      std::cerr << "send error" << std::endl;
+      SPDLOG_ERROR("failed to send tile");
+      ctx->buffer.len = 0;
+      return;
     }
+
+    self->available_tiles_--;
   }
 
   [[nodiscard]] auto find_tile_context() -> tile_context*
@@ -150,18 +172,32 @@ private:
 
   std::vector<tile_context> tiles_;
 
-  sockaddr_in broadcast_address_;
+  sockaddr_in send_address_;
+
+  size_t required_tiles_{};
+
+  size_t available_tiles_{};
 };
 
 } // namespace
 
 auto
-main() -> int
+main(const int argc, char** argv) -> int
 {
-  constexpr auto w{ 1280 };
-  constexpr auto h{ 720 };
+  stream_options opts;
 
-  program prg(/*device_index=*/0, w, h, "127.0.0.1", 9850);
+  try {
+    if (!opts.parse(argc, argv)) {
+      return EXIT_FAILURE;
+    }
+  } catch (const std::exception& e) {
+    SPDLOG_ERROR(e.what());
+    return EXIT_FAILURE;
+  }
+
+  program prg(opts.video_device, opts.frame_width, opts.frame_height, opts.send_ip.c_str(), opts.send_port);
+
+  SPDLOG_INFO("publishing tiles over UDP to {}:{}", opts.send_ip, opts.send_port);
 
   prg.run();
 

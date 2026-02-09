@@ -237,7 +237,7 @@ public:
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, f.width, f.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, f.width, f.height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
     }
   }
 
@@ -279,17 +279,7 @@ protected:
         continue;
       }
 
-      uint8_t rgba[LINKET_TILE_SIZE * LINKET_TILE_SIZE * 4];
-      for (auto i = 0; i < (LINKET_TILE_SIZE * LINKET_TILE_SIZE); i++) {
-        auto* src = &t.rgb[i * 3];
-        auto* dst = &rgba[i * 4];
-        dst[0] = src[0];
-        dst[1] = src[1];
-        dst[2] = src[2];
-        dst[3] = 255;
-      }
-
-      glTexSubImage2D(GL_TEXTURE_2D, 0, t.x, t.y, LINKET_TILE_SIZE, LINKET_TILE_SIZE, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+      glTexSubImage2D(GL_TEXTURE_2D, 0, t.x, t.y, LINKET_TILE_SIZE, LINKET_TILE_SIZE, GL_RGB, GL_UNSIGNED_BYTE, t.rgb);
     }
   }
 

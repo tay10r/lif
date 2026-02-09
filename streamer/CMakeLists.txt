@@ -29,6 +29,8 @@ target_link_libraries(linket_viewer
 # Streamer #
 #==========#
 
+find_package(spdlog REQUIRED)
+find_package(cxxopts REQUIRED)
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(UV REQUIRED libuv)
@@ -38,7 +40,9 @@ if(NOT TARGET linket::encoder)
 endif()
 
 add_executable(linket_stream
-  main.cpp
+  stream.cpp
+  stream_options.h
+  stream_options.cpp
   camera.h
   camera.cpp
 )
@@ -51,5 +55,7 @@ target_include_directories(linket_stream
 target_link_libraries(linket_stream
   PRIVATE
     linket::encoder
+    spdlog::spdlog
+    cxxopts::cxxopts
     ${UV_LIBRARIES}
 )
