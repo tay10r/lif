@@ -6,11 +6,19 @@ void
 linket_decoder_forward(const float* input, float* output);
 
 void
-linket_decode_tile(const int x, const int y, const unsigned char* latent, const int w, const int h, unsigned char* rgb)
+linket_decode_tile(const int x,
+                   const int y,
+                   const unsigned char* restrict tile_data,
+                   const int w,
+                   const int h,
+                   unsigned char* restrict rgb)
 {
   const int blocks_per_row = (LINKET_TILE_SIZE / LINKET_BLOCK_SIZE);
 
   const int num_pixels = LINKET_BLOCK_SIZE * LINKET_BLOCK_SIZE;
+
+  const float min_v = ((const float*)(tile_data))[0];
+  const float max_v = ((const float*)(tile_data))[1];
 
 #ifndef LINKET_OPENMP_DISABLED
 #pragma omp parallel for
@@ -28,12 +36,12 @@ linket_decode_tile(const int x, const int y, const unsigned char* latent, const 
     const int x_offset = x + x_block * LINKET_BLOCK_SIZE;
     const int y_offset = y + y_block * LINKET_BLOCK_SIZE;
 
-    const float scale = *((const float*)(latent + j * LINKET_BYTES_PER_LATENT));
+    const float scale = (max_v - min_v);
 
     for (int k = 0; k < LINKET_LATENT_DIM; k++) {
 
-      const float x = ((float)latent[j * LINKET_BYTES_PER_LATENT + k + sizeof(float)]) * (1.0F / 255.0F);
-      const float y = (x * 2.0F - 1.0F) * scale;
+      const float x = ((float)tile_data[j * LINKET_LATENT_DIM + k + sizeof(float) * 2]) * (1.0F / 255.0F);
+      const float y = x * scale + min_v;
       net_input[k] = y;
     }
 

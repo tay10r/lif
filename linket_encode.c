@@ -6,26 +6,30 @@ void
 linket_encoder_forward(const float* input, float* output);
 
 static void
-pack_latent(const float* in, unsigned char* out)
+quantize_tile(const float* latent_data, unsigned char* out)
 {
-  float abs_max = 0.0F;
+  float min_v = latent_data[0];
+  float max_v = min_v;
 
-  for (int k = 0; k < LINKET_LATENT_DIM; k++) {
-    const float x = in[k];
-    const float y = x < 0.0F ? -x : x;
-    abs_max = (y > abs_max) ? y : abs_max;
+  const int n = LINKET_LATENT_DIM * LINKET_BLOCKS_PER_TILE;
+
+  for (int k = 1; k < n; k++) {
+    const float x = latent_data[k];
+    min_v = (x < min_v) ? x : min_v;
+    max_v = (x > max_v) ? x : max_v;
   }
 
-  *((float*)out) = abs_max;
+  ((float*)out)[0] = min_v;
+  ((float*)out)[1] = max_v;
 
-  const float scale = 1.0F / (LINKET_EPSILON + abs_max);
+  const float scale = 1.0F / (LINKET_EPSILON + (max_v - min_v));
 
-  for (int k = 0; k < LINKET_LATENT_DIM; k++) {
-    const float x = ((in[k] * scale) + 1.0F) * 0.5F;
+  for (int k = 0; k < n; k++) {
+    const float x = ((latent_data[k] - min_v) * scale);
     int v = (int)(x * 255);
     v = (v > 255) ? 255 : v;
     v = (v < 0) ? 0 : v;
-    out[k + sizeof(float)] = (unsigned char)v;
+    out[k + sizeof(float) * 2] = (unsigned char)v;
   }
 }
 
@@ -37,7 +41,9 @@ linket_encode(const unsigned char* rgb, const int w, const int h, void* user_dat
 
   const int num_tiles = x_tiles * y_tiles;
 
-  unsigned char latent_bits[LINKET_BYTES_PER_LATENT * LINKET_BLOCKS_PER_TILE];
+  float latent_data[LINKET_LATENT_DIM * LINKET_BLOCKS_PER_TILE];
+
+  unsigned char tile_bits[8 + LINKET_LATENT_DIM * LINKET_BLOCKS_PER_TILE];
 
   for (int i = 0; i < num_tiles; i++) {
 
@@ -69,19 +75,17 @@ linket_encode(const unsigned char* rgb, const int w, const int h, void* user_dat
 
         const unsigned char* pixel = &rgb[((y + y_offset) * w + (x + x_offset)) * 3];
 
-        net_input[0 * LINKET_BLOCK_SIZE * LINKET_BLOCK_SIZE + y * LINKET_BLOCK_SIZE + x] =
-          ((float)pixel[0]) * (1.0F / 255.0F);
-        net_input[1 * LINKET_BLOCK_SIZE * LINKET_BLOCK_SIZE + y * LINKET_BLOCK_SIZE + x] =
-          ((float)pixel[1]) * (1.0F / 255.0F);
-        net_input[2 * LINKET_BLOCK_SIZE * LINKET_BLOCK_SIZE + y * LINKET_BLOCK_SIZE + x] =
-          ((float)pixel[2]) * (1.0F / 255.0F);
+        const float s = 1.0F / 255.0F;
+        net_input[0 * LINKET_BLOCK_SIZE * LINKET_BLOCK_SIZE + y * LINKET_BLOCK_SIZE + x] = ((float)pixel[0]) * s;
+        net_input[1 * LINKET_BLOCK_SIZE * LINKET_BLOCK_SIZE + y * LINKET_BLOCK_SIZE + x] = ((float)pixel[1]) * s;
+        net_input[2 * LINKET_BLOCK_SIZE * LINKET_BLOCK_SIZE + y * LINKET_BLOCK_SIZE + x] = ((float)pixel[2]) * s;
       }
 
-      linket_encoder_forward(net_input, net_output);
-
-      pack_latent(net_output, latent_bits + j * LINKET_BYTES_PER_LATENT);
+      linket_encoder_forward(net_input, &latent_data[j * LINKET_LATENT_DIM]);
     }
 
-    cb(user_data, /*x=*/x_tile * LINKET_TILE_SIZE, /*y=*/y_tile * LINKET_TILE_SIZE, latent_bits);
+    quantize_tile(latent_data, tile_bits);
+
+    cb(user_data, /*x=*/x_tile * LINKET_TILE_SIZE, /*y=*/y_tile * LINKET_TILE_SIZE, tile_bits);
   }
 }
