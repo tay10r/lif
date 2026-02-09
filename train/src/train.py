@@ -66,7 +66,7 @@ def train(config_path: Path, out_dir: Path, datasets_dir: Path):
     enc.to(dev)
     dec.to(dev)
 
-    optimizer = torch.optim.Adam(list(enc.parameters()) + list(dec.parameters()), lr=config.lr)
+    optimizer = torch.optim.AdamW(list(enc.parameters()) + list(dec.parameters()), lr=config.lr)
     epoch = 0
     enc.train()
     dec.train()

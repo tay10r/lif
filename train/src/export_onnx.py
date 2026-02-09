@@ -3,6 +3,8 @@ from pathlib import Path
 
 import torch
 
+from loguru import logger
+
 from src.algos.base import Algo
 from src.algos.factory import make_algo
 from src.config import load_config, Config
@@ -42,6 +44,7 @@ def main():
         if not model_dir.is_dir():
             continue
         model_name = model_dir.name
+        logger.info(f'exporting {model_name}')
         config_path = Path('configs')  / f'{model_name}.json'
         config: Config = load_config(config_path)
         algo: Algo = make_algo(config.algo,

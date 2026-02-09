@@ -5,8 +5,8 @@ from dataclasses import dataclass
 class Config:
     algo: str
     algo_params: dict
-    batch_size: int = 16
-    lr: float = 1.0e-4
+    batch_size: int = 128
+    lr: float = 1.0e-3
     block_size: int = 8
     input_channels: int = 3
     latent_dim: int = 8
