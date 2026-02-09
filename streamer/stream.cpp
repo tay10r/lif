@@ -40,8 +40,14 @@ struct tile_context final
 class program final
 {
 public:
-  explicit program(const int device_index, const int w, const int h, const char* send_ip, const int send_port)
+  explicit program(const int device_index,
+                   const int w,
+                   const int h,
+                   const char* send_ip,
+                   const int send_port,
+                   const bool benchmark)
     : camera_(camera::create(device_index, w, h))
+    , benchmark_(benchmark)
   {
     const auto [w1, h1] = camera_->get_frame_size();
 
@@ -68,6 +74,10 @@ public:
 
   void run()
   {
+    using clock = std::chrono::high_resolution_clock;
+
+    auto t0 = clock::now();
+
     while (true) {
 
       uv_run(&loop_, UV_RUN_NOWAIT);
@@ -83,7 +93,15 @@ public:
 
       linket_encode(rgb, frame_width_, frame_height_, this, on_encoded_tile);
 
-      SPDLOG_DEBUG("sent frame");
+      auto t1 = clock::now();
+
+      const auto frame_dt = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+
+      t0 = t1;
+
+      if (benchmark_) {
+        SPDLOG_INFO("total frame time {} ms", frame_dt);
+      }
     }
 
     uv_close(reinterpret_cast<uv_handle_t*>(&socket_), nullptr);
@@ -177,6 +195,8 @@ private:
   size_t required_tiles_{};
 
   size_t available_tiles_{};
+
+  bool benchmark_{ false };
 };
 
 } // namespace
@@ -195,7 +215,8 @@ main(const int argc, char** argv) -> int
     return EXIT_FAILURE;
   }
 
-  program prg(opts.video_device, opts.frame_width, opts.frame_height, opts.send_ip.c_str(), opts.send_port);
+  program prg(
+    opts.video_device, opts.frame_width, opts.frame_height, opts.send_ip.c_str(), opts.send_port, opts.benchmark);
 
   SPDLOG_INFO("publishing tiles over UDP to {}:{}", opts.send_ip, opts.send_port);
 

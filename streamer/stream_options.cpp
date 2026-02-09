@@ -22,7 +22,8 @@ stream_options::parse(int argc, char** argv) -> bool
      cxxopts::value<int>()->default_value(std::to_string(frame_width))) //
     ("h,height",
      "The frame height to stream.",
-     cxxopts::value<int>()->default_value(std::to_string(frame_height))) //
+     cxxopts::value<int>()->default_value(std::to_string(frame_height)))                                           //
+    ("b,benchmark", "Whether or not to display performance data.", cxxopts::value<bool>()->implicit_value("true")) //
     ("help", "Print this help.", cxxopts::value<bool>()->implicit_value("true"));
 
   const auto result = options.parse(argc, argv);
@@ -36,6 +37,7 @@ stream_options::parse(int argc, char** argv) -> bool
   video_device = result["device"].as<int>();
   frame_width = result["width"].as<int>();
   frame_height = result["height"].as<int>();
+  benchmark = result["benchmark"].as<bool>();
 
   return true;
 }

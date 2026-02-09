@@ -14,5 +14,7 @@ struct stream_options final
 
   int frame_height{ 720 };
 
+  bool benchmark{ false };
+
   [[nodiscard]] auto parse(int argc, char** argv) -> bool;
 };
