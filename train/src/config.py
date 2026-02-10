@@ -3,16 +3,17 @@ from dataclasses import dataclass
 
 @dataclass
 class Config:
-    algo: str
-    algo_params: dict
-    batch_size: int = 128
+    batch_size: int = 64
     lr: float = 1.0e-3
-    block_size: int = 8
-    input_channels: int = 3
-    latent_dim: int = 8
+    latent_dim: int = 4
 
 def load_config(path: str | Path) -> Config:
     import json
-    with open(path, 'r') as f:
-        data = json.load(f)
-    return Config(**data)
+    if isinstance(path, str):
+        path = Path(path)
+    if path.exists():
+        with open(path, 'r') as f:
+            data = json.load(f)
+        return Config(**data)
+    else:
+        return Config()

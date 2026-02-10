@@ -1,7 +1,6 @@
 #include <glow/main.hpp>
 
-#include <linket_config.h>
-#include <linket_decode.h>
+#include <linket.h>
 
 #include <imgui_stdlib.h>
 #include <implot.h>
