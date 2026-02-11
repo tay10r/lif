@@ -1,6 +1,10 @@
 NICE
 ====
 
+<a target="_blank" href="https://colab.research.google.com/github/tay10r/NICE/blob/dev/NICE.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
+
 ### Neural Image Compression Engine
 
 This is a multi-threaded, vectorized, fixed-bitrate image compression algorithm that uses a neural network to encode an
