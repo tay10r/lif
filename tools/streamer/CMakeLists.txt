@@ -1,33 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(linket_streamer)
-
-include(cmake/glow.cmake)
-
-#========#
-# Viewer #
-#========#
-
-add_executable(linket_viewer
-  viewer.cpp
-)
-
-target_include_directories(linket_viewer
-  PRIVATE
-    ${UV_INCLUDE_DIRS}
-)
-
-target_link_libraries(linket_viewer
-  PRIVATE
-    glow::glow
-    glow::main
-    linket::decoder
-    ${UV_LIBRARIES}
-)
-
-#==========#
-# Streamer #
-#==========#
+project(nice_streamer)
 
 find_package(spdlog REQUIRED)
 find_package(cxxopts REQUIRED)
@@ -35,26 +8,26 @@ find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(UV REQUIRED libuv)
 
-if(NOT TARGET linket::encoder)
-  add_subdirectory(.. linket)
+if(NOT TARGET NICE::NICE)
+  add_subdirectory(../.. core)
 endif()
 
-add_executable(linket_stream
-  stream.cpp
-  stream_options.h
-  stream_options.cpp
+add_executable(stream
+  main.cpp
+  options.h
+  options.cpp
   camera.h
   camera.cpp
 )
 
-target_include_directories(linket_stream
+target_include_directories(stream
   PRIVATE
     ${UV_INCLUDE_DIRS}
 )
 
-target_link_libraries(linket_stream
+target_link_libraries(stream
   PRIVATE
-    linket::encoder
+    NICE::NICE
     spdlog::spdlog
     cxxopts::cxxopts
     ${UV_LIBRARIES}

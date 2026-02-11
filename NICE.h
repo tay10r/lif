@@ -1,5 +1,9 @@
 #pragma once
 
+#define NICE_BLOCK_SIZE 8
+
+#define NICE_TILE_SIZE 80
+
 #ifdef __cplusplus
 extern "C"
 {

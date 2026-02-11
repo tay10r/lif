@@ -1,4 +1,4 @@
-#include "stream_options.h"
+#include "options.h"
 
 #include <cstdint>
 
@@ -7,7 +7,7 @@
 #include <cxxopts.hpp>
 
 auto
-stream_options::parse(int argc, char** argv) -> bool
+options::parse(int argc, char** argv) -> bool
 {
   cxxopts::Options options("linket_streamer", "A program for streaming video using the linket codec.");
 

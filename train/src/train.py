@@ -104,29 +104,30 @@ def train(config_path: Path, out_dir: Path):
     repeat = 16
     num_epochs = (len(train_loader) // epoch_size) * repeat
     best_loss = math.inf
-    for batch in train_loader:
-        x: torch.Tensor = batch.to(dev)
-        loss: torch.Tensor = forward(enc, dec, x)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        counter += 1
-        if counter % epoch_size == 0:
-            epoch += 1
-            enc.eval()
-            dec.eval()
-            val_loss = validate(enc, dec, val_loader, dev=dev)
-            best_delta = val_loss - best_loss if best_loss != math.inf else 0.0
-            logger.info(f'[{epoch:04}/{num_epochs:04}]: val_loss={val_loss:.6f}, best_delta={best_delta:.6f}')
-            if val_loss < best_loss:
-                best_loss = val_loss
-                enc.to('cpu')
-                dec.to('cpu')
-                save_best(enc, dec, out_dir)
-                enc.to(dev)
-                dec.to(dev)
-            enc.train()
-            dec.train()
+    while epoch < num_epochs:
+        for batch in train_loader:
+            x: torch.Tensor = batch.to(dev)
+            loss: torch.Tensor = forward(enc, dec, x)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            counter += 1
+            if counter % epoch_size == 0:
+                epoch += 1
+                enc.eval()
+                dec.eval()
+                val_loss = validate(enc, dec, val_loader, dev=dev)
+                best_delta = val_loss - best_loss if best_loss != math.inf else 0.0
+                logger.info(f'[{epoch:04}/{num_epochs:04}]: val_loss={val_loss:.6f}, best_delta={best_delta:.6f}')
+                if val_loss < best_loss:
+                    best_loss = val_loss
+                    enc.to('cpu')
+                    dec.to('cpu')
+                    save_best(enc, dec, out_dir)
+                    enc.to(dev)
+                    dec.to(dev)
+                enc.train()
+                dec.train()
 
 def main():
     parser = ArgumentParser()
