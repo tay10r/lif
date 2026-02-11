@@ -2,7 +2,7 @@
 
 #include <string>
 
-struct stream_options final
+struct options final
 {
   std::string send_ip{ "127.0.0.1" };
 

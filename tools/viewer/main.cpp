@@ -1,7 +1,6 @@
 #include <glow/main.hpp>
 
-#include <linket_config.h>
-#include <linket_decode.h>
+#include <NICE.h>
 
 #include <imgui_stdlib.h>
 #include <implot.h>
@@ -40,7 +39,7 @@ struct tile final
 
   int y{};
 
-  uint8_t rgb[LINKET_TILE_SIZE * LINKET_TILE_SIZE * 3];
+  uint8_t rgb[NICE_TILE_SIZE * NICE_TILE_SIZE * 3];
 };
 
 struct connection final
@@ -54,6 +53,8 @@ struct connection final
   std::vector<tile> tile_queue;
 
   int64_t timestamp{};
+
+  NICE_Engine* engine_ptr{};
 
   void handle_new_timestamp()
   {
@@ -73,6 +74,8 @@ public:
     , thread_(&io_worker::run_thread, this)
   {
   }
+
+  ~io_worker() { NICE_DestroyEngine(engine_); }
 
   void stop()
   {
@@ -114,7 +117,7 @@ protected:
                       const sockaddr* sender,
                       const unsigned int flags)
   {
-    if (read_size != (LINKET_BYTES_PER_TILE + 16)) {
+    if (read_size != (1216)) {
       return;
     }
 
@@ -137,7 +140,7 @@ protected:
     t.x = *reinterpret_cast<const int32_t*>(ptr + 8);
     t.y = *reinterpret_cast<const int32_t*>(ptr + 12);
 
-    linket_decode_tile(0, 0, ptr + 16, LINKET_TILE_SIZE, LINKET_TILE_SIZE, t.rgb);
+    NICE_DecodeTile(conn->engine_ptr, ptr + 16, NICE_TILE_SIZE * 3, t.rgb);
 
     {
       std::lock_guard<std::mutex> lock(conn->tile_lock);
@@ -158,6 +161,8 @@ protected:
       auto& conn = connections_[i];
 
       conn.reset(new connection());
+
+      conn->engine_ptr = engine_;
 
       uv_udp_init(&loop_, &conn->socket);
 
@@ -193,6 +198,8 @@ protected:
   }
 
 private:
+  NICE_Engine* engine_{ NICE_NewEngine() };
+
   io_plan plan_;
 
   std::vector<std::unique_ptr<connection>> connections_;
@@ -275,11 +282,11 @@ protected:
 
     for (auto& t : tile_queue) {
 
-      if (((t.x + LINKET_TILE_SIZE) > f.width) || ((t.y + LINKET_TILE_SIZE) > f.height)) {
+      if (((t.x + NICE_TILE_SIZE) > f.width) || ((t.y + NICE_TILE_SIZE) > f.height)) {
         continue;
       }
 
-      glTexSubImage2D(GL_TEXTURE_2D, 0, t.x, t.y, LINKET_TILE_SIZE, LINKET_TILE_SIZE, GL_RGB, GL_UNSIGNED_BYTE, t.rgb);
+      glTexSubImage2D(GL_TEXTURE_2D, 0, t.x, t.y, NICE_TILE_SIZE, NICE_TILE_SIZE, GL_RGB, GL_UNSIGNED_BYTE, t.rgb);
     }
   }
 

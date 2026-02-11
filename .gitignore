@@ -1,6 +1,8 @@
 # C/C++ related stuff
 build
 .cache
+*.o
+*.a
 
 # Python related stuff
 train/onnx2c
@@ -8,3 +10,4 @@ train/data
 train/out
 __pycache__
 .venv
+.ipynb_checkpoints

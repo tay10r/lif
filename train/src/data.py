@@ -40,4 +40,5 @@ class MemoryMappedDataset(torch.utils.data.Dataset):
         return self.__data.shape[0]
 
     def __getitem__(self, index: int) -> torch.Tensor:
-        return torch.from_numpy(self.__data[index])
+        x: np.ndarray = self.__data[index]
+        return torch.from_numpy(x.copy())
