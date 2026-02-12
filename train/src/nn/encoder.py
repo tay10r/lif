@@ -6,11 +6,7 @@ class Encoder(nn.Module):
     def __init__(self, latent_dim: int):
         super().__init__()
         self.__layers = nn.Sequential(
-            LinearResNet(),
-            LinearResNet(),
-            LinearResNet(),
-            LinearResNet(),
-            nn.Linear(64, latent_dim, bias=False),
+            nn.Linear(64, latent_dim)
         )
 
     def forward(self, x: Tensor) -> Tensor:
