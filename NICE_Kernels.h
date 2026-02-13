@@ -5,17 +5,19 @@ extern "C"
 {
 #endif
 
-  void nice__mat_vec_mul(const float* restrict W, const float* restrict x, float* restrict y);
+  void NICE__MatVecMul(const float* restrict W, const float* restrict x, float* restrict y);
 
-  void nice__vec_add(const float* restrict x, const float* restrict z, float* restrict y);
+  void NICE__VecAdd(const float* restrict x, const float* restrict z, float* restrict y);
 
-  void nice__relu(const float* restrict x, float* restrict y);
+  void NICE__LeakyReLU(const float* restrict x, float* restrict y);
 
-  void nice__mat_vec_mul_4x64(const float* restrict A, const float* restrict x, float* restrict out);
+  void NICE__MatVecMul_256x48(const float* restrict A, const float* restrict x, float* restrict out);
 
-  void nice__mat_vec_mul_64x4(const float* restrict A, const float* restrict x, float* restrict out);
+  void NICE__MatVecMul_48x256(const float* restrict A, const float* restrict x, float* restrict out);
 
-  void nice__softsign(const float* restrict x, float* restrict y);
+  void NICE__MatVecMul_256x192(const float* restrict A, const float* restrict x, float* restrict out);
+
+  void NICE__MatVecMul_192x256(const float* restrict A, const float* restrict x, float* restrict out);
 
 #ifdef __cplusplus
 } /* extern "C" */
