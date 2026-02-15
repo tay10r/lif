@@ -41,9 +41,12 @@ extern "C"
   void NICE_DestroyEngine(NICE_Engine* engine);
 
   /**
-   * @brief Registers the callback to receive error information, when an error occurs.
+   * @brief Registers the callback to receive error information, when an error
+   * occurs.
    * */
-  void NICE_SetErrorHandler(NICE_Engine* engine, void* user_data, NICE_ErrorHandler handler);
+  void NICE_SetErrorHandler(NICE_Engine* engine,
+                            void* user_data,
+                            NICE_ErrorHandler handler);
 
   /**
    * @brief Loads an encoder, from the file containing its trained weights.
@@ -58,22 +61,48 @@ extern "C"
   /**
    * @brief Encodes a single 8x8 RGB block into a 12-byte buffer.
    * */
-  void NICE_Encode(const NICE_Engine* engine, const unsigned char* rgb, int pitch, unsigned char* bits);
+  void NICE_Encode(const NICE_Engine* engine,
+                   const unsigned char* rgb,
+                   int pitch,
+                   unsigned char* bits);
 
   /**
    * @brief Decodes a 12-byte buffer into a single 8x8 RGB block.
    * */
-  void NICE_Decode(const NICE_Engine* engine, const unsigned char* bits, int pitch, unsigned char* rgb);
+  void NICE_Decode(const NICE_Engine* engine,
+                   const unsigned char* bits,
+                   int pitch,
+                   unsigned char* rgb);
 
   /**
    * @brief Encodes an 80x80 RGB tile into a 1200-byte buffer.
    * */
-  void NICE_EncodeTile(const NICE_Engine* engine, const unsigned char* rgb, int pitch, unsigned char* bits);
+  void NICE_EncodeTile(const NICE_Engine* engine,
+                       const unsigned char* rgb,
+                       int pitch,
+                       unsigned char* bits);
 
   /**
    * @brief Decodes an 80x80 RGB tile from a 1200-byte buffer.
    * */
-  void NICE_DecodeTile(const NICE_Engine* engine, const unsigned char* bits, int pitch, unsigned char* rgb);
+  void NICE_DecodeTile(const NICE_Engine* engine,
+                       const unsigned char* bits,
+                       int pitch,
+                       unsigned char* rgb);
+
+  /**
+   * @brief Trains the encoder and decoder with the provided RGB data.
+   * @param engine A pointer to the engine instance to be trained.
+   * @param rgb A pointer to the RGB data used for training.
+   *            Should point to an 8x8 block of RGB pixels.
+   * @param pitch The number of bytes per row of the RGB data.
+   * @param learning_rate The learning rate to be used during training.
+   * @return The reconstruction loss.
+   */
+  float NICE_TrainBlock(NICE_Engine* engine,
+                        const unsigned char* rgb,
+                        int pitch,
+                        float learning_rate);
 
 #ifdef __cplusplus
 } /* extern "C" */
