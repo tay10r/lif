@@ -208,7 +208,7 @@ NICE_Encode(const NICE_Engine* engine, const unsigned char* rgb, const int pitch
     const float* z = &tape.z[i * 8];
 
     for (int j = 0; j < 8; j++) {
-      result |= (z[j] != 0.0F ? 1 : 0) << j;
+      result |= (z[j] > 0.0F ? 1 : 0) << j;
     }
 
     bits[i] = result;

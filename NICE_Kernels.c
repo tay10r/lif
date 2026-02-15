@@ -17,9 +17,7 @@ NICE__LeakyReLU(const float* restrict x, float* restrict y)
 }
 
 void
-NICE__LeakyReLU_Grad(const float* restrict x,
-                     const float* restrict grad_y,
-                     float* restrict grad_x)
+NICE__LeakyReLU_Grad(const float* restrict x, const float* restrict grad_y, float* restrict grad_x)
 {
   for (int i = 0; i < LATENT_DIM; i++) {
     const float x_i = x[i];
@@ -32,14 +30,12 @@ NICE__SoftSign(const float* restrict x, float* restrict y)
 {
   for (int i = 0; i < LATENT_DIM; i++) {
     // y[i] = x[i] / (1.0F + fabsf(x[i]));
-    y[i] = x[i] > 0.0F ? 1.0F : -1.0F;
+    y[i] = x[i] > 0.0F ? 1.0F : 0.0F;
   }
 }
 
 void
-NICE__SoftSign_Grad(const float* restrict x,
-                    const float* restrict grad_y,
-                    float* restrict grad_x)
+NICE__SoftSign_Grad(const float* restrict x, const float* restrict grad_y, float* restrict grad_x)
 {
   for (int i = 0; i < LATENT_DIM; i++) {
     const float x_i = x[i];
@@ -64,9 +60,7 @@ NICE__MSE(const float* restrict y, const float* restrict y_target)
 }
 
 void
-NICE__MatVecMul_32x32(const float* restrict W,
-                      const float* restrict x,
-                      float* restrict y)
+NICE__MatVecMul_32x32(const float* restrict W, const float* restrict x, float* restrict y)
 {
   for (int i = 0; i < LATENT_DIM; i += LANES) {
 
@@ -88,9 +82,7 @@ NICE__MatVecMul_32x32(const float* restrict W,
 }
 
 void
-NICE__MatVecMul_32x192(const float* restrict W,
-                       const float* restrict x,
-                       float* restrict y)
+NICE__MatVecMul_32x192(const float* restrict W, const float* restrict x, float* restrict y)
 {
   // multiply a 32-D vector by a 192x32 matrix, producing a 192-D vector
 
@@ -114,9 +106,7 @@ NICE__MatVecMul_32x192(const float* restrict W,
 }
 
 void
-NICE__MatVecMul_192x32(const float* restrict W,
-                       const float* restrict x,
-                       float* restrict y)
+NICE__MatVecMul_192x32(const float* restrict W, const float* restrict x, float* restrict y)
 {
   // multiply a 192-D vector by a 32x192 matrix, producing a 32-D vector
 
@@ -140,9 +130,7 @@ NICE__MatVecMul_192x32(const float* restrict W,
 }
 
 void
-NICE__VecAdd(const float* restrict x,
-             const float* restrict z,
-             float* restrict y)
+NICE__VecAdd(const float* restrict x, const float* restrict z, float* restrict y)
 {
   for (int i = 0; i < LATENT_DIM; i++) {
     y[i] = x[i] + z[i];
@@ -150,9 +138,7 @@ NICE__VecAdd(const float* restrict x,
 }
 
 void
-NICE__VecAdd_Grad(const float* restrict grad_y,
-                  float* restrict grad_x,
-                  float* restrict grad_z)
+NICE__VecAdd_Grad(const float* restrict grad_y, float* restrict grad_x, float* restrict grad_z)
 {
   for (int i = 0; i < LATENT_DIM; i++) {
     const float g = grad_y[i];
@@ -162,9 +148,7 @@ NICE__VecAdd_Grad(const float* restrict grad_y,
 }
 
 void
-NICE__MSE_Grad(const float* restrict y,
-               const float* restrict y_target,
-               float* restrict grad_y)
+NICE__MSE_Grad(const float* restrict y, const float* restrict y_target, float* restrict grad_y)
 {
   const float invN = 1.0F / (float)DIM_X;
 
