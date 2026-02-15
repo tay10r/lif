@@ -10,7 +10,7 @@ find_package(OpenMP REQUIRED COMPONENTS C)
 set(compiler_flags)
 
 if(CMAKE_COMPILER_IS_GNUCC)
-  set(compiler_flags -ffast-math -march=native -mtune=native)
+  #set(compiler_flags -ffast-math -march=native -mtune=native)
 endif()
 
 add_library(NICE

@@ -119,19 +119,13 @@ InitWeights(NICE_Engine* e, unsigned seed)
   const float s0 = sqrtf(2.0f / (float)fan_in_w0);
   const float s1 = sqrtf(2.0f / (float)fan_in_32);
 
-  init_uniform(
-    e->encoder.w0, (int)(sizeof(e->encoder.w0) / sizeof(float)), s0, &st);
-  init_uniform(
-    e->encoder.w1, (int)(sizeof(e->encoder.w1) / sizeof(float)), s1, &st);
-  init_uniform(
-    e->encoder.w2, (int)(sizeof(e->encoder.w2) / sizeof(float)), s1, &st);
+  init_uniform(e->encoder.w0, (int)(sizeof(e->encoder.w0) / sizeof(float)), s0, &st);
+  init_uniform(e->encoder.w1, (int)(sizeof(e->encoder.w1) / sizeof(float)), s1, &st);
+  init_uniform(e->encoder.w2, (int)(sizeof(e->encoder.w2) / sizeof(float)), s1, &st);
 
-  init_uniform(
-    e->decoder.w3, (int)(sizeof(e->decoder.w3) / sizeof(float)), s1, &st);
-  init_uniform(
-    e->decoder.w4, (int)(sizeof(e->decoder.w4) / sizeof(float)), s1, &st);
-  init_uniform(
-    e->decoder.w5, (int)(sizeof(e->decoder.w5) / sizeof(float)), s1, &st);
+  init_uniform(e->decoder.w3, (int)(sizeof(e->decoder.w3) / sizeof(float)), s1, &st);
+  init_uniform(e->decoder.w4, (int)(sizeof(e->decoder.w4) / sizeof(float)), s1, &st);
+  init_uniform(e->decoder.w5, (int)(sizeof(e->decoder.w5) / sizeof(float)), s1, &st);
 
   memset(e->encoder.b0, 0, sizeof e->encoder.b0);
   memset(e->decoder.b1, 0, sizeof e->decoder.b1);
@@ -156,9 +150,7 @@ NICE_DestroyEngine(NICE_Engine* engine)
 }
 
 void
-NICE_SetErrorHandler(NICE_Engine* engine,
-                     NICE_ErrorHandler handler,
-                     void* user_data)
+NICE_SetErrorHandler(NICE_Engine* engine, void* user_data, NICE_ErrorHandler handler)
 {
   engine->error_handler = handler;
   engine->user_data = user_data;
@@ -192,77 +184,80 @@ InitTape(struct Tape* tape, const unsigned char* restrict rgb, const int pitch)
     const int y = i / NICE_BLOCK_SIZE;
     const int x = i % NICE_BLOCK_SIZE;
     const int j = y * pitch + x * 3;
-    tape->x[i + (NICE_BLOCK_SIZE * NICE_BLOCK_SIZE) * 0] =
-      ((float)rgb[j + 0]) * (1.0F / 255.0F);
-    tape->x[i + (NICE_BLOCK_SIZE * NICE_BLOCK_SIZE) * 1] =
-      ((float)rgb[j + 1]) * (1.0F / 255.0F);
-    tape->x[i + (NICE_BLOCK_SIZE * NICE_BLOCK_SIZE) * 2] =
-      ((float)rgb[j + 2]) * (1.0F / 255.0F);
+    tape->x[i + (NICE_BLOCK_SIZE * NICE_BLOCK_SIZE) * 0] = ((float)rgb[j + 0]) * (1.0F / 255.0F);
+    tape->x[i + (NICE_BLOCK_SIZE * NICE_BLOCK_SIZE) * 1] = ((float)rgb[j + 1]) * (1.0F / 255.0F);
+    tape->x[i + (NICE_BLOCK_SIZE * NICE_BLOCK_SIZE) * 2] = ((float)rgb[j + 2]) * (1.0F / 255.0F);
   }
 }
 
 void
-NICE_Encode(const NICE_Engine* engine,
-            const unsigned char* rgb,
-            const int pitch,
-            unsigned char* bits)
+NICE_Encode(const NICE_Engine* engine, const unsigned char* rgb, const int pitch, unsigned char* bits)
 {
-  /*
-float x[DIM];
+  struct Tape tape;
 
-float y[LATENT_DIM];
+  InitTape(&tape, rgb, pitch);
 
-for (int c = 0; c < 3; ++c) {
+  EncoderForward(&engine->encoder, &tape);
 
-  for (int i = 0; i < BLOCK_SIZE; ++i) {
-    for (int j = 0; j < BLOCK_SIZE; ++j) {
-      x[i * BLOCK_SIZE + j] = ((float)rgb[i * pitch + j * 3 + c]) * SCALE;
+  const int num_bytes = LATENT_DIM / 8;
+
+  for (int i = 0; i < num_bytes; i++) {
+
+    unsigned char result = 0;
+
+    const float* z = &tape.z[i * 8];
+
+    for (int j = 0; j < 8; j++) {
+      result |= (z[j] != 0.0F ? 1 : 0) << j;
+    }
+
+    bits[i] = result;
+  }
+}
+
+inline static unsigned char
+clamp_u8(const int x0)
+{
+  const int x1 = (x0 > 255) ? 255 : x0;
+  const int x2 = (x1 < 0) ? 0 : x1;
+  return (unsigned char)x2;
+}
+
+void
+NICE_Decode(const NICE_Engine* engine, const unsigned char* restrict bits, const int pitch, unsigned char* restrict rgb)
+{
+  struct Tape tape;
+
+  const int num_bytes = LATENT_DIM / 8;
+
+  for (int i = 0; i < num_bytes; i++) {
+
+    for (int j = 0; j < 8; j++) {
+      tape.z[i * 8 + j] = ((1 << j) & bits[i]) ? 1.0F : 0.0F;
     }
   }
 
-  EncodeForward(x, y, GetEncoder(engine));
+  DecoderForward(&engine->decoder, &tape);
 
-  Quantize4(y, &bits[c * 4]);
-}
-  */
-}
+#define K (NICE_BLOCK_SIZE * NICE_BLOCK_SIZE)
 
-void
-NICE_Decode(const NICE_Engine* engine,
-            const unsigned char* restrict bits,
-            int pitch,
-            unsigned char* restrict rgb)
-{
-  /*
-float y[LATENT_DIM];
-float x[DIM];
+  for (int y = 0; y < NICE_BLOCK_SIZE; y++) {
 
-for (int c = 0; c < 3; ++c) {
+    for (int x = 0; x < NICE_BLOCK_SIZE; x++) {
 
-  Dequantize4(&bits[c * 4], y);
+      const int r = (int)(tape.y[0 * K + y * NICE_BLOCK_SIZE + x] * 255.0F);
+      const int g = (int)(tape.y[1 * K + y * NICE_BLOCK_SIZE + x] * 255.0F);
+      const int b = (int)(tape.y[2 * K + y * NICE_BLOCK_SIZE + x] * 255.0F);
 
-  DecodeForward(y, x, GetDecoder(engine));
-
-  for (int i = 0; i < BLOCK_SIZE; ++i) {
-
-    for (int j = 0; j < BLOCK_SIZE; ++j) {
-
-      const float xf = x[i * BLOCK_SIZE + j];
-
-      const float pf = xf * (1.0F / SCALE);
-
-      rgb[i * pitch + j * 3 + c] = ClampToU8(pf);
+      rgb[(y * pitch + x * 3) + 0] = clamp_u8(r);
+      rgb[(y * pitch + x * 3) + 1] = clamp_u8(g);
+      rgb[(y * pitch + x * 3) + 2] = clamp_u8(b);
     }
   }
 }
-  */
-}
 
 void
-NICE_EncodeTile(const NICE_Engine* engine,
-                const unsigned char* rgb,
-                int pitch,
-                unsigned char* bits)
+NICE_EncodeTile(const NICE_Engine* engine, const unsigned char* rgb, const int pitch, unsigned char* bits)
 {
   int i = 0;
 
@@ -273,8 +268,7 @@ NICE_EncodeTile(const NICE_Engine* engine,
     const int bx = i % 10;
     const int by = i / 10;
 
-    const unsigned char* block_rgb =
-      rgb + (by * NICE_BLOCK_SIZE) * pitch + (bx * NICE_BLOCK_SIZE) * 3;
+    const unsigned char* block_rgb = rgb + (by * NICE_BLOCK_SIZE) * pitch + (bx * NICE_BLOCK_SIZE) * 3;
 
     unsigned char* block_bits = bits + i * (3 * LATENT_DIM);
 
@@ -283,10 +277,7 @@ NICE_EncodeTile(const NICE_Engine* engine,
 }
 
 void
-NICE_DecodeTile(const NICE_Engine* engine,
-                const unsigned char* bits,
-                int pitch,
-                unsigned char* rgb)
+NICE_DecodeTile(const NICE_Engine* engine, const unsigned char* bits, int pitch, unsigned char* rgb)
 {
   int i = 0;
 
@@ -297,8 +288,7 @@ NICE_DecodeTile(const NICE_Engine* engine,
     const int bx = i % 10;
     const int by = i / 10;
 
-    unsigned char* block_rgb =
-      rgb + (by * NICE_BLOCK_SIZE) * pitch + (bx * NICE_BLOCK_SIZE) * 3;
+    unsigned char* block_rgb = rgb + (by * NICE_BLOCK_SIZE) * pitch + (bx * NICE_BLOCK_SIZE) * 3;
 
     const unsigned char* block_bits = bits + i * (3 * LATENT_DIM);
 
@@ -307,10 +297,7 @@ NICE_DecodeTile(const NICE_Engine* engine,
 }
 
 float
-NICE_TrainBlock(NICE_Engine* engine,
-                const unsigned char* rgb,
-                const int pitch,
-                const float learning_rate)
+NICE_TrainBlock(NICE_Engine* engine, const unsigned char* rgb, const int pitch, const float learning_rate)
 {
   struct Tape tape;
 
@@ -330,8 +317,7 @@ NICE_TrainBlock(NICE_Engine* engine,
 
   float grad_w5[3 * LATENT_DIM * NICE_BLOCK_SIZE * NICE_BLOCK_SIZE] = { 0 };
 
-  NICE__MatVecMul_32x192_Grad(
-    engine->decoder.w5, tape.t8, grad.y, grad_w5, grad.t8);
+  NICE__MatVecMul_32x192_Grad(engine->decoder.w5, tape.t8, grad.y, grad_w5, grad.t8);
 
   NICE__LeakyReLU_Grad(tape.t7, grad.t8, grad.t7);
 
@@ -341,20 +327,17 @@ NICE_TrainBlock(NICE_Engine* engine,
 
   float grad_w4[LATENT_DIM * LATENT_DIM] = { 0 };
 
-  NICE__MatVecMul_32x32_Grad(
-    engine->decoder.w4, tape.t5, grad.t6, grad_w4, grad.t5);
+  NICE__MatVecMul_32x32_Grad(engine->decoder.w4, tape.t5, grad.t6, grad_w4, grad.t5);
 
   float grad_w3[LATENT_DIM * LATENT_DIM] = { 0 };
 
-  NICE__MatVecMul_32x32_Grad(
-    engine->decoder.w3, tape.z, grad.t5, grad_w3, grad.z);
+  NICE__MatVecMul_32x32_Grad(engine->decoder.w3, tape.z, grad.t5, grad_w3, grad.z);
 
   NICE__SoftSign_Grad(tape.t4, grad.z, grad.t4);
 
   float grad_w2[LATENT_DIM * LATENT_DIM] = { 0 };
 
-  NICE__MatVecMul_32x32_Grad(
-    engine->encoder.w2, tape.t3, grad.t4, grad_w2, grad.t3);
+  NICE__MatVecMul_32x32_Grad(engine->encoder.w2, tape.t3, grad.t4, grad_w2, grad.t3);
 
   NICE__LeakyReLU_Grad(tape.t2, grad.t3, grad.t2);
 
@@ -364,13 +347,11 @@ NICE_TrainBlock(NICE_Engine* engine,
 
   float grad_w1[LATENT_DIM * LATENT_DIM] = { 0 };
 
-  NICE__MatVecMul_32x32_Grad(
-    engine->encoder.w1, tape.t0, grad.t1, grad_w1, grad.t0);
+  NICE__MatVecMul_32x32_Grad(engine->encoder.w1, tape.t0, grad.t1, grad_w1, grad.t0);
 
   float grad_w0[3 * LATENT_DIM * NICE_BLOCK_SIZE * NICE_BLOCK_SIZE] = { 0 };
 
-  NICE__MatVecMul_192x32_Grad(
-    engine->encoder.w0, tape.x, grad.t0, grad_w0, grad.x);
+  NICE__MatVecMul_192x32_Grad(engine->encoder.w0, tape.x, grad.t0, grad_w0, grad.x);
 
   const int n_w0 = 3 * LATENT_DIM * NICE_BLOCK_SIZE * NICE_BLOCK_SIZE;
   const int n_w1 = LATENT_DIM * LATENT_DIM;
